@@ -1,0 +1,55 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+!define DEVICONS https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/devicons
+!define FONTAWESOME https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/font-awesome-5
+' uncomment the following line and comment the first to use locally
+' !include C4_Container.puml
+!include DEVICONS/java.puml
+!include FONTAWESOME/envelope.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Container diagram for IoT System
+
+Person(end_user, "End User", "The Device Owner")
+System(device, "IoT Device", "The Iot Device")
+
+Rel_R(end_user, device, "use")
+
+Lay_R(end_user, device)
+
+System_Boundary(iot, "IoT System") {
+    Container(mqtt_broker, "MQTT Broker", "EMQX", "MQTT Cluster", "Eulang")
+
+    Container(device_event_recorder, "Device Event Recording Service", "Java/Spring", "Record Device Event to Timeseries Database", "Spring")
+    Container(device_event_bridge, "Device Event Bridge", "Java/Spring", "Produce or Consume message to Device Event Stream", "Spring")
+    Container(device_mng_api, "Device Management Service", "Java/Spring", "Device Controller and Infomation Management", "Spring")
+    ContainerDb_Ext(dynamodb, "Database", "DymamoDB", "Stores user registration information, hashed auth credentials, access logs, etc.", "mysql_server")
+    Container_Ext(kinesis, "Device Event Stream", "AWS Kinesis", "stream device event flow to microservices")
+}
+
+Lay_D(device,iot)
+Rel_D(mqtt_broker, device, "deliver commands","MQTT")
+Rel(device, mqtt_broker, "publish events","MQTT")
+
+Lay_D(mqtt_broker,device_event_recorder)
+Lay_D(mqtt_broker,device_event_bridge)
+Lay_D(mqtt_broker,device_mng_api)
+
+
+Rel_D(mqtt_broker, device_event_bridge, "publish events","MQTT")
+Rel(mqtt_broker, device_event_recorder, "publish events","MQTT")
+Rel(device_mng_api, device_event_bridge, "send commands","MQTT")
+Rel(device_event_bridge, mqtt_broker, "send commands","MQTT")
+
+Lay_R(device_event_recorder,device_event_bridge)
+Lay_R(device_event_bridge,device_mng_api)
+Lay_D(device_event_recorder,dynamodb)
+Lay_D(device_event_bridge,kinesis)
+Lay_R(dynamodb,kinesis)
+
+Rel(device_event_recorder, dynamodb, "read/write","HTTPS")
+Rel(device_event_bridge, kinesis, "produce events","HTTP/2")
+Rel(device_mng_api, dynamodb, "read/write","HTTPS")
+
+@enduml

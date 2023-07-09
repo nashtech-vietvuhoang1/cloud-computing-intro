@@ -1,0 +1,55 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+!define FONTAWESOME https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/font-awesome-5
+' uncomment the following line and comment the first to use locally
+' !include C4_Context.puml
+!include FONTAWESOME/envelope.puml
+
+LAYOUT_WITH_LEGEND()
+SHOW_PERSON_OUTLINE()
+
+title The IoT System
+
+Person(end_user, "End User", "The Device Owner")
+System(device, "IoT Device", "The Iot Device")
+
+Rel_R(end_user, device, "use")
+
+Lay_R(end_user, device)
+
+Enterprise_Boundary(iot_system_boundary, "IoT System") {
+    System(iot_system, "IoT System", "Iot")
+    System_Ext(kinesis, "Kinesis Streams", "IoT Device Events Stream")
+    System_Ext(iam, "Client IAM", "System Centralization User Management (SSO)")
+    
+    Lay_R(iot_system, iam)
+    Lay_D(iam, kinesis)
+    Rel_R(iot_system, kinesis, "produce/consume", "HTTP/2")
+    Rel_R(iot_system, iam, "authen/author", "HTTPS")
+}
+
+Lay_D(device, iot_system_boundary)
+Rel_D(device, iot_system, "send events", "MQTT+SSL")
+Rel_D(device, iot_system, "subcrible commands", "MQTT+SSL")
+
+System_Ext(washing_machine_ms, "Washing Machine Service", "Washing Machine Microservices")
+System_Ext(fridge_ms, "Fridge Service", "Fridge Microservices")
+System_Ext(other_ms, "...", "Other Microservices")
+
+Rel_U(washing_machine_ms, iot_system, "access", "HTTPS")
+Rel_U(washing_machine_ms, kinesis, "subcribe", "HTTP/2")
+
+Rel_U(fridge_ms, iot_system, "access", "HTTPS")
+Rel_U(fridge_ms, kinesis, "subcribe", "HTTP/2")
+
+Rel_U(other_ms, iot_system, "access", "HTTPS")
+Rel_U(other_ms, kinesis, "subcribe", "HTTP/2")
+
+Lay_D(iot_system_boundary, washing_machine_ms)
+Lay_D(iot_system_boundary, fridge_ms)
+Lay_D(iot_system_boundary, other_ms)
+
+Lay_R(washing_machine_ms, fridge_ms)
+Lay_D(fridge_ms, other_ms)
+
+@enduml

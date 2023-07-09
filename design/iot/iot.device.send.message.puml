@@ -1,0 +1,34 @@
+@startuml
+
+participant Device as device #48C9B0
+box "Iot System" #D6EAF8 
+participant "MQTT Broker" as mqtt_broker #5DADE2
+participant "Device Event Recording Service" as event_record_srv #5DADE2
+participant "Device Event Bridge Service" as event_processing_srv #5DADE2
+database "DynamoDB Event table" as db_event_log #F39C12
+queue "Kinesis Stream" as kinesis #F39C12
+end box
+
+participant "Device MicroServices" as devivce_ms
+
+
+device -->> mqtt_broker: send events
+activate mqtt_broker 
+
+  mqtt_broker -->> event_record_srv: publish event
+  activate event_record_srv
+    event_record_srv -> db_event_log: put to db
+  deactivate event_record_srv
+
+  mqtt_broker -->> event_processing_srv: publish event
+  activate event_processing_srv
+    event_processing_srv -> kinesis: produce event to associated stream
+    activate kinesis
+    kinesis -> devivce_ms: deliver event 
+    deactivate kinesis
+  deactivate event_processing_srv
+
+deactivate mqtt_broker
+
+
+@enduml

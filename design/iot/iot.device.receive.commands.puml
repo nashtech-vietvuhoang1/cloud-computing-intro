@@ -1,0 +1,31 @@
+@startuml
+
+
+participant "Device MicroServices" as devivce_ms
+box "Iot System" #D6EAF8 
+participant "Device Management API" as api #5DADE2
+participant "Client IAM" as iam #27AE60
+participant "Device Event Bridge Service" as event_processing_srv #5DADE2
+participant "MQTT Broker" as mqtt_broker #5DADE2
+
+end box
+
+participant Device as device #48C9B0
+
+devivce_ms -> api: POST Device Commands
+activate api 
+  api -> iam: authorize
+  api -> event_processing_srv: send command  
+  activate event_processing_srv 
+    event_processing_srv -->> mqtt_broker: post commands to Device Topic
+    activate mqtt_broker 
+      mqtt_broker -->> device: publish commands
+    deactivate mqtt_broker
+  deactivate event_processing_srv 
+  devivce_ms <-- api: HttpCode 202 Accepted
+
+deactivate api  
+
+
+
+@enduml
