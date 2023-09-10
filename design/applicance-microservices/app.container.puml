@@ -1,0 +1,64 @@
+@startuml
+!include <C4/C4_Container>
+!define DEVICONS https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/devicons
+!define FONTAWESOME https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/font-awesome-5
+' uncomment the following line and comment the first to use locally
+' !include C4_Container.puml
+!include DEVICONS/java.puml
+!include FONTAWESOME/envelope.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Container diagram for IoT System
+
+
+Person(end_user, "End User", "The Device Owner")
+System(web, "Web Portal Application", "Web Portal Application")
+Rel_D(end_user, web, "use")
+System(app, "Mobile Application", "Controller Application")
+Lay_R(web, app)
+Rel_D(end_user, app, "use")
+
+System_Boundary(applicance_ms, "Appliance Microservices") {  
+  Container(app_mng_srv, "Appliance Management Service", "Java/Spring", "Appliance Managing, Controling and Monitoring", $sprite="java")  
+  Container(push_srv, "Realtime Push Message Service", "NodeJS/SocketIO", "Realtime Push Message channel", $sprite="java")
+  Lay_R(app_mng_srv, push_srv)
+  Container(notification_srv, "Mobile Notification Service", "NodeJS", "Realtime Push Message channel", $sprite="java")
+  Lay_R(push_srv, notification_srv)
+
+  Container_Ext(mq, "Message Queues", "SQS", "Messaging Channel")
+  ContainerDb_Ext(dynamodb, "Database", "DymamoDB", "Appliance Management")  
+
+  Rel_D(app_mng_srv, dynamodb, "read/write", "HTTPS")
+  Rel_D(app_mng_srv, mq, "produce/consume", "HTTPS")
+  Rel_D(notification_srv, mq, "consume", "HTTPS")  
+  Rel_D(push_srv, mq, "consume", "HTTPS")  
+
+  Container_Ext(sns, "Notification", "SNS", "Notification Channel")
+  Rel_D(notification_srv, sns, "send", "HTTPS") 
+
+  Container_Ext(ciam, "Client IAM", "AWS Cognito", "System Centralization User Management (SSO)")
+  Rel_L(app_mng_srv, ciam, "authorize", "HTTPS") 
+
+  Container(lambda, "Event bridge function", "Lambda Function", "Device Event Bridge")
+  Rel_U(lambda, mq, "consume/produce", "HTTPS") 
+}
+
+Rel_D(web, app_mng_srv, "control/monitor")
+Rel_D(app, app_mng_srv, "control/monitor")
+Rel_U(push_srv, web, "push notification", "Web Socket")
+Rel_U(sns, app, "send notification")
+
+System_Boundary(iot, "IoT System") {    
+    Container_Ext(iot_ciam, "IoT Client IAM", "AWS Cognito", "System Centralization User Management (SSO)")
+    Container_Ext(device_mng_api, "Device Management Service", "Java/Spring", "Device Controller and Infomation Management", "Spring")
+    Lay_R(iot_ciam, device_mng_api)
+    Container_Ext(kinesis, "Device Event Stream", "AWS Kinesis", "stream device event flow to microservices")    
+    Lay_R(device_mng_api, kinesis)    
+}
+
+Rel_D(lambda, kinesis, "consume/produce", "HTTP2")
+Rel_D(ciam, iot_ciam, "user federation", "OAuth2")
+Rel_D(app_mng_srv, device_mng_api, "register/get-info", "HTTP2")
+
+@enduml
